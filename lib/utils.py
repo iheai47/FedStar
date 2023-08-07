@@ -248,7 +248,7 @@ def init_structure_encoding(args, gs, type_init):
 
     elif type_init == 'rw_sp':
         for g in gs:
-            print("原始图像g:",g)
+            print("原始图像Gg:",g)
             print(g.edge_index)
             # 创建一个空的无向图
             G1 = nx.Graph()
