@@ -7,12 +7,14 @@ from multiprocessing import Process, Lock
 
 def set_up_log(args, sys_argv):
     log_dir = args.outbase
-    dataset_log_dir = os.path.join(log_dir, 'raw/'+args.data_group)
+    dataset_log_dir0 = os.path.join(log_dir, 'raw')
+    dataset_log_dir1 = os.path.join(dataset_log_dir0, args.data_group)
     if not os.path.exists(log_dir):
         os.mkdir(log_dir)
-    if not os.path.exists(dataset_log_dir):
-        os.mkdir(dataset_log_dir)
-    file_path = os.path.join(dataset_log_dir, '{}.log'.format(
+    if not os.path.exists(dataset_log_dir1):
+        os.mkdir(dataset_log_dir0)
+        os.mkdir(dataset_log_dir1)
+    file_path = os.path.join(dataset_log_dir1, '{}.log'.format(
         str(args.repeat) + "_log_" + args.alg + '_'+ args.type_init + "_"))
 
     logging.basicConfig(level=logging.INFO)
