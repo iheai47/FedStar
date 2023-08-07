@@ -262,7 +262,7 @@ def init_structure_encoding(args, gs, type_init):
             G1.add_edges_from(edges)
             print("图像G1:", G1)
 
-            # 创建图对象
+            # 创建图对象0
             G = nx.DiGraph()
             # 添加节点和边
             for i in range(g.edge_index.shape[1]):
