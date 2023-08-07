@@ -87,6 +87,7 @@ def run_fedstar(args, clients, server, COMMUNICATION_ROUNDS, local_epoch, samp=N
             client.local_train(local_epoch)
 
         server.aggregate_weights_se(selected_clients)
+
         for client in selected_clients:
             client.download_from_server(args, server)
 

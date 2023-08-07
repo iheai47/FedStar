@@ -7,18 +7,21 @@ import torch
 from tensorboardX import SummaryWriter
 from pathlib import Path
 
+
 lib_dir = (Path(__file__).parent / ".." / "lib").resolve()
 if str(lib_dir) not in sys.path:
     sys.path.insert(0, str(lib_dir))
 
 import setupGC
 from training import *
+from log import *
 
 
 def process_selftrain(args, clients, server, local_epoch):
     print("Self-training ...")
     df = pd.DataFrame()
     allAccs = run_selftrain_GC(args, clients, server, local_epoch)
+
     for k, v in allAccs.items():
         df.loc[k, [f'train_acc', f'val_acc', f'test_acc']] = v
     print(df)
@@ -34,6 +37,7 @@ def process_fedstar(args, clients, server, summary_writer):
 
     print("Running FedStar ...")
     frame = run_fedstar(args, clients, server, args.num_rounds, args.local_epoch, samp=None, summary_writer=summary_writer)
+
     if args.repeat is None:
         outfile = os.path.join(outpath, f'accuracy_fedstar_{args.type_init}_GC.csv')
     else:
@@ -78,13 +82,29 @@ if __name__ == '__main__':
     parser.add_argument('--seq_length', help='the length of the gradient norm sequence',
                         type=int, default=5)
     parser.add_argument('--n_rw', type=int, default=16,
-                        help='Size of position encoding (random walk).')
+                        help='Size of position encoding (random walk).'
+                             'The dimension of random walk-based structure embedding (RWSE). Default: 16.')
     parser.add_argument('--n_dg', type=int, default=16,
-                        help='Size of position encoding (max degree).')
+                        help='Size of position encoding (max degree).'
+                             'The dimension of degree-based structure embedding (DSE). Default: 16.')
+    parser.add_argument('--n_sp', type=int, default=16,
+                        help='Size of position encoding (max degree).'
+                             'The dimension of SP structure embedding (DSE). Default: 16.')
+
     parser.add_argument('--n_ones', type=int, default=16,
                         help='Size of position encoding (ones).')
-    parser.add_argument('--type_init', help='the type of positional initialization',
-                        type=str, default='rw_dg', choices=['rw', 'dg', 'rw_dg', 'ones'])
+    parser.add_argument('--type_init', help='the type of positional initialization '
+                            'The type of structure embedding. Default: ''rw_dg''.',
+                        type=str, default='rw_dg', choices=['rw', 'dg', 'rw_dg', 'ones', 'sp', 'rw_sp'])
+
+
+
+    # logging & debug
+    parser.add_argument('--summary_file', type=str, default='result_summary.log', help='brief summary of training result')  # sp (shortest path) or rw (random walk)
+    parser.add_argument('--debug', default=False, action='store_true',
+                        help='whether to use debug mode')
+
+
 
     try:
         args = parser.parse_args()
@@ -98,6 +118,10 @@ if __name__ == '__main__':
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed(args.seed)
 
+    # set logger
+    logger = set_up_log(args, sys.argv)
+    logger.log(0,"2")
+
     # set device
     args.device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -109,7 +133,9 @@ if __name__ == '__main__':
     # preparing data
     print("Preparing data ...")
     splitedData, df_stats = setupGC.prepareData_multiDS(args, args.datapath, args.data_group, args.batch_size, seed=seed_dataSplit)
-    print("Done")
+    print("Preparing data Done")
+    logger.info(splitedData)
+    logger.info(df_stats)
 
     # save statistics of data on clients
     if args.repeat is None:

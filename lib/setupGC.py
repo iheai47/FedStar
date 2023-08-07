@@ -112,6 +112,8 @@ def prepareData_multiDS(args, datapath, group='chem', batchSize=32, seed=None):
         graphs_val = init_structure_encoding(args, gs=graphs_val, type_init=args.type_init)
         graphs_test = init_structure_encoding(args, gs=graphs_test, type_init=args.type_init)
 
+        #在深度学习中，数据加载器是用于批量加载和处理数据的工具。PyTorch提供了DataLoader类，
+        # 可以方便地将数据集包装成可迭代的数据加载器对象。
         dataloader_train = DataLoader(graphs_train, batch_size=batchSize, shuffle=True)
         dataloader_val = DataLoader(graphs_val, batch_size=batchSize, shuffle=True)
         dataloader_test = DataLoader(graphs_test, batch_size=batchSize, shuffle=True)
@@ -160,6 +162,7 @@ def prepareData_multiDS_multi(args, datapath, group='small', batchSize=32, nc_pe
 
         graphs = [x for x in tudataset]
         print("  **", data, len(graphs))
+
         num_node_features = graphs[0].num_node_features
         graphs_chunks = _randChunk(graphs, nc_per_ds, overlap=False, seed=seed)
         for idx, chunks in enumerate(graphs_chunks):
@@ -192,10 +195,13 @@ def setup_devices(splitedData, args):
     for idx, ds in enumerate(splitedData.keys()):
         idx_clients[idx] = ds
         dataloaders, num_node_features, num_graph_labels, train_size = splitedData[ds]
+
+        #根据算法类型（args.alg）选择相应的模型类型，并使用给定的参数初始化客户端模型（cmodel_gc）。
         if args.alg == 'fedstar':
             cmodel_gc = GIN_dc(num_node_features, args.n_se, args.hidden, num_graph_labels, args.nlayer, args.dropout)
         else:
             cmodel_gc = GIN(num_node_features, args.hidden, num_graph_labels, args.nlayer, args.dropout)
+
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, cmodel_gc.parameters()), lr=args.lr, weight_decay=args.weight_decay)
         clients.append(Client_GC(cmodel_gc, idx, ds, train_size, dataloaders, optimizer, args))
 
