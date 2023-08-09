@@ -71,10 +71,11 @@ def prepareData_oneDS(datapath, data, num_client, batchSize, convert_x=False, se
 
     return splitedData, df
 
-def prepareData_multiDS(args, datapath, group='chem', batchSize=32, seed=None):
+def prepareData_multiDS(args, datapath, group='chem', batchSize=32, seed=None, ):
     assert group in ['chem', "biochem", 'biochemsn', "biosncv"]
 
     if group == 'chem':
+        # datasets = ["MUTAG", "BZR", "COX2", "DHFR", "PTC_MR"]
         datasets = ["MUTAG", "BZR", "COX2", "DHFR", "PTC_MR", "AIDS", "NCI1"]
     elif group == 'biochem':
         datasets = ["MUTAG", "BZR", "COX2", "DHFR", "PTC_MR", "AIDS", "NCI1",  # small molecules
@@ -87,7 +88,6 @@ def prepareData_multiDS(args, datapath, group='chem', batchSize=32, seed=None):
         datasets = ["ENZYMES", "DD", "PROTEINS",                               # bioinformatics
                     "COLLAB", "IMDB-BINARY", "IMDB-MULTI",                     # social networks
                     "Letter-high", "Letter-low", "Letter-med"]                 # computer vision
-
     splitedData = {}
     df = pd.DataFrame()
     for data in datasets:

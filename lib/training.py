@@ -41,6 +41,7 @@ def run_fedavg(args, clients, server, COMMUNICATION_ROUNDS, local_epoch, samp=No
             client.local_train(local_epoch)
 
         server.aggregate_weights(selected_clients)
+
         for client in selected_clients:
             client.download_from_server(args, server)
 

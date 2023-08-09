@@ -110,7 +110,22 @@ def init_structure_encoding(args, gs, type_init):
                 M_power=M_power*M
                 SE_rw.append(torch.from_numpy(M_power.diagonal()).float())
             SE_rw=torch.stack(SE_rw,dim=-1)
-
+            '''
+            具体来看,SE_rw的行与列表示的意义:
+            每一行代表一个节点的嵌入向量。SE_rw有N行,N为图的节点数量。
+            每一列代表随机游走的步数。SE_rw有args.n_rw列,表示进行了args.n_rw步的随机游走。
+            也就是说,取SE_rw中一个节点i的第t列,就是该节点执行t步随机游走后,结束节点的分布特征。
+            
+            举个例子:
+            
+            SE_rw[i, 3] 表示节点i进行3步随机游走,结束在各个节点上的概率分布。
+            SE_rw[j, 5] 表示节点j进行5步随机游走,结束在各个节点上的概率分布。
+            所以行是节点的索引,列是随机游走的步数。SE_rw封装了每个节点基于随机游走得到的结构信息。
+            
+            这种嵌入方式可以充分表达节点的STRUCTURAL CONTEXT,也就是节点在图网络拓扑结构中的位置信息。
+            
+            因此,SE_rw可以表示任意节点的拓扑嵌入特征,并作为图神经网络模型的有效输入之一。
+            '''
             g['stc_enc'] = SE_rw
 
     elif type_init == 'dg':
@@ -248,21 +263,23 @@ def init_structure_encoding(args, gs, type_init):
 
     elif type_init == 'rw_sp':
         for g in gs:
-            print("原始图像Gg:",g)
-            print(g.edge_index)
-            # 创建一个空的无向图
-            G1 = nx.Graph()
 
-            # 添加节点及其特征
-            for i, features in enumerate(g.x):
-                G1.add_node(i, features=features)
+            # # 创建一个空的无向图
+            # G1 = nx.Graph()
+            #
+            # # 添加节点及其特征
+            # for i, features in enumerate(g.x):
+            #     G1.add_node(i, features=features)
+            #
+            # # 添加边
+            # edges = g.edge_index.t().tolist()
+            # G1.add_edges_from(edges)
+            # print("无向图图像G:", G1)
+            # print(g.edge_index)
+            # print("原始图像g:",g)
+            # print("有向图像:", G)
 
-            # 添加边
-            edges = g.edge_index.t().tolist()
-            G1.add_edges_from(edges)
-            print("图像G1:", G1)
-
-            # 创建图对象0
+            # 创建图对象
             G = nx.DiGraph()
             # 添加节点和边
             for i in range(g.edge_index.shape[1]):
@@ -275,7 +292,6 @@ def init_structure_encoding(args, gs, type_init):
                 for i in range(g.x.shape[0]):
                     G.add_node(i)
 
-            print("图像G:", G)
 
             # # 添加节点特征
             # for i in range(g.x.shape[0]):
@@ -302,13 +318,24 @@ def init_structure_encoding(args, gs, type_init):
             node_featuress = []
             # 将节点的最短距离编码为长度为 n_dg 的向量，并进行 one-hot 编码
             dist_encoded = torch.zeros(n_sp)
+
             for node in G.nodes():
                 shortest_dist = shortest_paths[node]
+                # print(node,shortest_dist)
                 for dist in shortest_dist.values():
                     dist_encoded[min(dist, n_sp - 1)] += 1.0
-                node_featuress.append(dist_encoded)
 
-            # 将最短距离编码特征转换为 tensor
+                # arr = np.array()
+                # # 计算总和
+                # total = np.sum(arr)
+                # # 每一项占总和的比例
+                # ratio = arr / total
+
+                total = sum(dist_encoded.clone())
+                ratio = dist_encoded.clone() / total
+                node_featuress.append(ratio)
+
+                # 将最短距离编码特征转换为 tensor
             SE_sp = torch.stack(node_featuress)
 
 

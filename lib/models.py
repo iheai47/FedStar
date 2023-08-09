@@ -97,16 +97,17 @@ class GIN_dc(torch.nn.Module):
 
         #hf0 将输入节点特征nfeat 转化为隐藏层维度nhid => hv0（输入嵌入）
         self.pre = torch.nn.Sequential(torch.nn.Linear(nfeat, nhid))
-        print("(输入节点特征=>隐藏层维度)",(nfeat, nhid))
+        # print("(输入节点特征=>隐藏层维度)",(nfeat, nhid))
 
         #fg0 将结构嵌入节点特征的维度n_se转换为隐藏层维度nhid => gv0 （输入嵌入）  args.n_se = args.n_rw + args.n_dg
         self.embedding_s = torch.nn.Linear(n_se, nhid)
-        print("(结构嵌入节点特征=>隐藏层维度)", (n_se, nhid))
+        # print("(结构嵌入节点特征=>隐藏层维度)", (n_se, nhid))
 
         self.graph_convs = torch.nn.ModuleList()
 
         #将x 和 s 拼接后的维度转换为隐藏层维度nhid
         self.nn1 = torch.nn.Sequential(torch.nn.Linear(nhid + nhid, nhid), torch.nn.ReLU(), torch.nn.Linear(nhid, nhid))
+
         self.graph_convs.append(GINConv(self.nn1))
         self.graph_convs_s_gcn = torch.nn.ModuleList()
         self.graph_convs_s_gcn.append(GCNConv(nhid, nhid))
@@ -123,8 +124,10 @@ class GIN_dc(torch.nn.Module):
     def forward(self, data):
         #DataBatch(edge_index=[2, 8142], x=[3790, 37], y=[128], stc_enc=[3790, 32], batch=[3790], ptr=[129])
         x, edge_index, batch, s = data.x, data.edge_index, data.batch, data.stc_enc
+
         x = self.pre(x)
         s = self.embedding_s(s)
+
         for i in range(len(self.graph_convs)):
             x = torch.cat((x, s), -1)
             x = self.graph_convs[i](x, edge_index)
@@ -132,6 +135,8 @@ class GIN_dc(torch.nn.Module):
             x = F.dropout(x, self.dropout, training=self.training)
             s = self.graph_convs_s_gcn[i](s, edge_index)
             s = torch.tanh(s)
+            # s = torch.relu (s)
+            # s = torch.sigmoid(s)
 
         x = self.Whp(torch.cat((x, s), -1))
         x = global_add_pool(x, batch)

@@ -31,6 +31,10 @@ class Server():
             if 'graph_convs' in k:
                 self.W[k].data = torch.div(torch.sum(torch.stack([torch.mul(client.W[k].data, client.train_size) for client in selected_clients]), dim=0), total_size).clone()
 
+    '''
+          与第一个实现的主要区别在于聚合的则是普通图卷积层,而不是含'_s'的特定图卷积层。
+          这样可以分别设计两种图卷积层的参数聚合方式,既保证了某些特定层的聚合方式,又可以针对通用图卷积层设计一个通用的聚合逻辑。
+    '''
     def aggregate_weights_se(self, selected_clients):
         # pass train_size, and weighted aggregate
         total_size = 0

@@ -124,23 +124,32 @@ def calc_gradsNorm(gconvNames, Ws):
 def train_gc(model, dataloaders, optimizer, local_epoch, device):
     losses_train, accs_train, losses_val, accs_val, losses_test, accs_test = [], [], [], [], [], []
     train_loader, val_loader, test_loader = dataloaders['train'], dataloaders['val'], dataloaders['test']
+
     for epoch in range(local_epoch):
         model.train()
-
         total_loss = 0.
         ngraphs = 0
-
         acc_sum = 0
 
         for _, batch in enumerate(train_loader):
             batch.to(device)
             optimizer.zero_grad()
-            pred = model(batch)
+            pred = model(batch) #运行模型的前向传播，得到预测结果
             label = batch.y
             acc_sum += pred.max(dim=1)[1].eq(label).sum().item()
+            # print(pred.max(dim=1))
+            # print(label)
+            # print("batch.num_graphs",batch.num_graphs)
+            '''
+            max函数返回的是这个,然后取1
+            torch.return_types.max(
+            values=tensor([0.5000, 0.9000, 0.9000]),
+            indices=tensor([1, 2, 4]))
+            '''
+
             loss = model.loss(pred, label)
-            loss.backward()
-            optimizer.step()
+            loss.backward() # 计算损失函数（loss）并进行反向传播（loss.backward()）。
+            optimizer.step() # 使用优化器执行一步参数更新（optimizer.step()）。
             total_loss += loss.item() * batch.num_graphs
             ngraphs += batch.num_graphs
         total_loss /= ngraphs

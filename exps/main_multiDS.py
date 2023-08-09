@@ -26,9 +26,9 @@ def process_selftrain(args, clients, server, local_epoch):
         df.loc[k, [f'train_acc', f'val_acc', f'test_acc']] = v
     print(df)
     if args.repeat is None:
-        outfile = os.path.join(outpath, f'accuracy_'+args.alg+'_GC.csv')
+        outfile = os.path.join(outpath, f'accuracy_GC.csv')
     else:
-        outfile = os.path.join(outpath, f'{args.repeat}_accuracy_'+args.alg+'_GC.csv')
+        outfile = os.path.join(outpath, f'{args.repeat}_accuracy_GC.csv')
     df.to_csv(outfile)
     print(f"Wrote to file: {outfile}")
 
@@ -39,9 +39,9 @@ def process_fedstar(args, clients, server, summary_writer):
     frame = run_fedstar(args, clients, server, args.num_rounds, args.local_epoch, samp=None, summary_writer=summary_writer)
 
     if args.repeat is None:
-        outfile = os.path.join(outpath, f'accuracy_fedstar_{args.type_init}_GC.csv')
+        outfile = os.path.join(outpath, f'accuracy_fedstar_{args.type_init}_GC_{args.nlayer}.csv')
     else:
-        outfile = os.path.join(outpath, f'{args.repeat}_accuracy_fedstar_{args.type_init}_GC.csv')
+        outfile = os.path.join(outpath, f'{args.repeat}_accuracy_fedstar_{args.type_init}_GC_{args.nlayer}.csv')
     frame.to_csv(outfile)
     print(f"Wrote to file: {outfile}")
 
@@ -98,14 +98,6 @@ if __name__ == '__main__':
                         type=str, default='rw_dg', choices=['rw', 'dg', 'rw_dg', 'ones', 'sp', 'rw_sp'])
 
 
-
-    # logging & debug
-    parser.add_argument('--summary_file', type=str, default='result_summary.log', help='brief summary of training result')  # sp (shortest path) or rw (random walk)
-    parser.add_argument('--debug', default=False, action='store_true',
-                        help='whether to use debug mode')
-
-
-
     try:
         args = parser.parse_args()
     except IOError as msg:
@@ -117,10 +109,6 @@ if __name__ == '__main__':
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed(args.seed)
-
-    # set logger
-    logger = set_up_log(args, sys.argv)
-    logger.log(0,"2")
 
     # set device
     args.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -134,8 +122,7 @@ if __name__ == '__main__':
     print("Preparing data ...")
     splitedData, df_stats = setupGC.prepareData_multiDS(args, args.datapath, args.data_group, args.batch_size, seed=seed_dataSplit)
     print("Preparing data Done")
-    logger.info(splitedData)
-    logger.info(df_stats)
+    # logger.info(splitedData)
 
     # save statistics of data on clients
     if args.repeat is None:
