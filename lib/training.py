@@ -96,6 +96,7 @@ def run_fedstar(args, clients, server, COMMUNICATION_ROUNDS, local_epoch, samp=N
         if c_round % 5 == 0:
             for idx in range(len(clients)):
                 loss, acc = clients[idx].evaluate()
+                # local_train方法用于训练模型，而evaluate方法用于评估模型的性能
                 summary_writer.add_scalar('Test/Acc/user' + str(idx + 1), acc, c_round)
                 summary_writer.add_scalar('Test/Loss/user' + str(idx + 1), loss, c_round)
 

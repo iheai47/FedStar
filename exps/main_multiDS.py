@@ -26,9 +26,9 @@ def process_selftrain(args, clients, server, local_epoch):
         df.loc[k, [f'train_acc', f'val_acc', f'test_acc']] = v
     print(df)
     if args.repeat is None:
-        outfile = os.path.join(outpath, f'accuracy_GC.csv')
+        outfile = os.path.join(outpath, f'accuracy_' + args.alg + '_GC.csv')
     else:
-        outfile = os.path.join(outpath, f'{args.repeat}_accuracy_GC.csv')
+        outfile = os.path.join(outpath, f'{args.repeat}_accuracy_' + args.alg + '_GC.csv')
     df.to_csv(outfile)
     print(f"Wrote to file: {outfile}")
 
@@ -39,9 +39,9 @@ def process_fedstar(args, clients, server, summary_writer):
     frame = run_fedstar(args, clients, server, args.num_rounds, args.local_epoch, samp=None, summary_writer=summary_writer)
 
     if args.repeat is None:
-        outfile = os.path.join(outpath, f'accuracy_fedstar_{args.type_init}_GC_{args.nlayer}.csv')
+        outfile = os.path.join(outpath, f'accuracy_fedstar_{args.type_init}_GC.csv')
     else:
-        outfile = os.path.join(outpath, f'{args.repeat}_accuracy_fedstar_{args.type_init}_GC_{args.nlayer}.csv')
+        outfile = os.path.join(outpath, f'{args.repeat}_accuracy_fedstar_{args.type_init}_GC.csv')
     frame.to_csv(outfile)
     print(f"Wrote to file: {outfile}")
 
