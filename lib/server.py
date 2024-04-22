@@ -57,6 +57,21 @@ class Server():
             if '_s' not in k:
                 self.W[k].data = torch.div(torch.sum(torch.stack([torch.mul(client.W[k].data, client.train_size) for client in selected_clients]), dim=0), total_size).clone()
 
+    def aggregate_weights_se1(self, selected_clients, weight_decay=0.0001):
+        total_size = sum([client.train_size for client in selected_clients])
+        for k in self.W.keys():
+            if '_s' in k:
+                weighted_sum = torch.zeros_like(self.W[k].data)
+                for client in selected_clients:
+                    weighted_sum += torch.mul(client.W[k].data, client.train_size)
+
+                # 计算加权平均，并添加权重衰减项
+                aggregated_weight = torch.div(weighted_sum, total_size)
+                regularization_term = self.W[k].data * weight_decay
+                aggregated_weight += regularization_term
+
+                # 将聚合后的权重赋值给当前模型
+                self.W[k].data = aggregated_weight.clone()
 
     def compute_pairwise_similarities(self, clients):
         client_dWs = []

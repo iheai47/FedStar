@@ -17,7 +17,7 @@ def _aggregate(inpath, outpath, filename):
 
 
 def average_aggregate_all(outpath):
-    algos = ['selftrain', 'fedstar_rw_dg','fedstar_rw_sp']
+    algos = ['selftrain', 'fedstar_rw_dg','fedstar_rw_ds']
     dfs = pd.DataFrame(index=algos, columns=['avg. of test_accuracy_mean', 'avg. of test_accuracy_std'])
     for algo in algos:
         df = pd.read_csv(os.path.join(outpath, f'accuracy_{algo}_GC.csv'), header=0, index_col=0)
@@ -31,7 +31,7 @@ def average_aggregate_all(outpath):
 def main_aggregate_all_multiDS(inpath, outpath):
     """ multiDS: aggregagte all outputs """
     Path(outpath).mkdir(parents=True, exist_ok=True)
-    for filename in ['accuracy_selftrain_GC.csv', 'accuracy_fedstar_rw_dg_GC.csv', 'accuracy_fedstar_rw_sp_GC.csv']:
+    for filename in ['accuracy_selftrain_GC.csv', 'accuracy_fedstar_rw_dg_GC.csv','accuracy_fedstar_rw_ds_GC.csv']:
         _aggregate(inpath, outpath, filename)
 
     """ get average performance for all algorithms """

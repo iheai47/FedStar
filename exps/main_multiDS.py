@@ -48,7 +48,7 @@ def process_fedstar(args, clients, server, summary_writer):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--device', type=str, default='cpu',
+    parser.add_argument('--device', type=str, default='gpu',
                         help='CPU / GPU device.')
     parser.add_argument('--alg', type=str, default='fedstar',
                         help='Name of algorithms.')
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=0.001,
                         help='learning rate for inner solver;')
     parser.add_argument('--weight_decay', type=float, default=5e-4,
-                        help='Weight decay (L2 loss on parameters).')
+                        help='Weight decay (L2 loss on parameters) 为5乘以10的负4次方.')
     parser.add_argument('--nlayer', type=int, default=3,
                         help='Number of GINconv layers')
     parser.add_argument('--hidden', type=int, default=64,
@@ -95,8 +95,11 @@ if __name__ == '__main__':
                         help='Size of position encoding (ones).')
     parser.add_argument('--type_init', help='the type of positional initialization '
                             'The type of structure embedding. Default: ''rw_dg''.',
-                        type=str, default='rw_dg', choices=['rw', 'dg', 'rw_dg', 'ones', 'sp', 'rw_sp'])
+                        type=str, default='rw_dg', choices=['rw', 'dg', 'rw_dg', 'ones', 'sp', 'rw_sp', 'sp_dg', 'rw_ds', 'dg_ds'])
 
+    parser.add_argument('--model', dest='model', default='PGNN', type=str,
+                        help='model class name. E.g., GCN, PGNN, ...')
+    parser.add_argument('--anchor_num', dest='anchor_num', default=16, type=int)
 
     try:
         args = parser.parse_args()
@@ -139,12 +142,13 @@ if __name__ == '__main__':
 
     # set summarywriter
     if 'fedstar' in args.alg:
-        sw_path = os.path.join(args.outbase, 'raw', 'tensorboard', f'{args.data_group}_{args.alg}_{args.type_init}_{args.repeat}')
+        sw_path = os.path.join(args.outbase, 'raw', 'tensorboard', f'{args.data_group}_{args.alg}_{args.type_init}_{args.batch_size}_{args.repeat}_{args.lr}_{args.weight_decay}')
     else:
         sw_path = os.path.join(args.outbase, 'raw', 'tensorboard', f'{args.data_group}_{args.alg}_{args.repeat}')
     summary_writer = SummaryWriter(sw_path)
 
     if args.alg == 'selftrain':
+        # process_selftrain(args, clients=copy.deepcopy(init_clients), server=copy.deepcopy(init_server), local_epoch=200)
         process_selftrain(args, clients=copy.deepcopy(init_clients), server=copy.deepcopy(init_server), local_epoch=200)
     elif args.alg == 'fedstar':
         process_fedstar(args, clients=copy.deepcopy(init_clients), server=copy.deepcopy(init_server), summary_writer=summary_writer)

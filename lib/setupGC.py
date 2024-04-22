@@ -2,20 +2,21 @@ import random
 from random import choices
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 import torch
 from torch_geometric.datasets import TUDataset
 from torch_geometric.loader import DataLoader
 from torch_geometric.transforms import OneHotDegree
 
-from models import GIN, serverGIN, GIN_dc, serverGIN_dc
+from models import GIN, serverGIN, GIN_dc, serverGIN_dc, GIN_ds
 from server import Server
 from client import Client_GC
-from utils import get_maxDegree, get_stats, split_data, get_numGraphLabels, init_structure_encoding
+from utils import (get_maxDegree, get_stats, split_data, get_numGraphLabels, init_structure_encoding,
+                   precompute_dist_data, preselect_anchor, compute_dist_for_single_graph)
+from multiprocessing import Pool
 
-from scipy.special import rel_entr
 import scipy
-from torch_geometric.utils import erdos_renyi_graph, degree
 
 def _randChunk(graphs, num_client, overlap, seed=None):
     random.seed(seed)
@@ -75,8 +76,9 @@ def prepareData_multiDS(args, datapath, group='chem', batchSize=32, seed=None, )
     assert group in ['chem', "biochem", 'biochemsn', "biosncv"]
 
     if group == 'chem':
-        # datasets = ["MUTAG", "BZR", "COX2", "DHFR", "PTC_MR"]
+        # datasets = ["ENZYMES"]
         datasets = ["MUTAG", "BZR", "COX2", "DHFR", "PTC_MR", "AIDS", "NCI1"]
+        # datasets = ["MUTAG", "BZR", "COX2", "DHFR", "PTC_MR"]
     elif group == 'biochem':
         datasets = ["MUTAG", "BZR", "COX2", "DHFR", "PTC_MR", "AIDS", "NCI1",  # small molecules
                     "ENZYMES", "DD", "PROTEINS"]                               # bioinformatics
@@ -104,6 +106,19 @@ def prepareData_multiDS(args, datapath, group='chem', batchSize=32, seed=None, )
 
         graphs = [x for x in tudataset]
         print("  **", data, len(graphs))
+
+        if args.type_init == 'rw_ds' or args.type_init == 'dg_ds':
+            with Pool(processes=8) as pool:
+                # results = list(tqdm(pool.imap(compute_dist_for_single_graph, graphs), total=len(graphs),desc='Processing graphs'))
+                results = list(pool.imap(compute_dist_for_single_graph, graphs))
+            for graph, dists in zip(graphs, results):
+                graph.dists = dists
+
+            # for g in tqdm(graphs, total=len(graphs), desc='Anchor set selecting'):
+            for g in graphs:
+                # print(g)
+                preselect_anchor(g, layer_num=2, anchor_num=args.anchor_num, device=args.device)
+                # print(g)
 
         graphs_train, graphs_valtest = split_data(graphs, test=0.2, shuffle=True, seed=seed)
         graphs_val, graphs_test = split_data(graphs_valtest, train=0.5, test=0.5, shuffle=True, seed=seed)
@@ -198,7 +213,10 @@ def setup_devices(splitedData, args):
 
         #根据算法类型（args.alg）选择相应的模型类型，并使用给定的参数初始化客户端模型（cmodel_gc）。
         if args.alg == 'fedstar':
-            cmodel_gc = GIN_dc(num_node_features, args.n_se, args.hidden, num_graph_labels, args.nlayer, args.dropout)
+            if args.type_init == 'rw_ds' or args.type_init == 'dg_ds':
+                cmodel_gc = GIN_ds(num_node_features, args.n_se, args.hidden, num_graph_labels, args.nlayer, args.dropout)
+            else:
+                cmodel_gc = GIN_dc(num_node_features, args.n_se, args.hidden, num_graph_labels, args.nlayer, args.dropout)
         else:
             cmodel_gc = GIN(num_node_features, args.hidden, num_graph_labels, args.nlayer, args.dropout)
 
@@ -209,5 +227,6 @@ def setup_devices(splitedData, args):
         smodel = serverGIN_dc(n_se=args.n_se, nlayer=args.nlayer, nhid=args.hidden)
     else:
         smodel = serverGIN(nlayer=args.nlayer, nhid=args.hidden)
+
     server = Server(smodel, args.device)
     return clients, server, idx_clients

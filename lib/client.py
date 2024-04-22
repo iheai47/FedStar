@@ -12,6 +12,7 @@ class Client_GC():
         self.args = args
 
         self.W = {key: value for key, value in self.model.named_parameters()}
+        # print(self.W)
         self.dW = {key: torch.zeros_like(value) for key, value in self.model.named_parameters()}
         self.W_old = {key: value.data.clone() for key, value in self.model.named_parameters()}
 
@@ -56,6 +57,10 @@ class Client_GC():
 
         grads_conv = {key: self.W[key].grad for key in self.gconvNames}
         self.convGradsNorm = torch.norm(flatten(grads_conv)).item()
+
+        # print("weightsNorm: {:.4f}, gradsNorm: {:.4f}, convWeightsNorm: {:.4f}, convGradsNorm: {:.4f}".format(
+        #     self.weightsNorm, self.gradsNorm, self.convWeightsNorm, self.convGradsNorm
+        # ))
 
     def compute_weight_update(self, local_epoch):
         """ For GCFL """
@@ -114,7 +119,7 @@ def subtract_(target, minuend, subtrahend):
         target[name].data = minuend[name].data.clone() - subtrahend[name].data.clone()
 
 def flatten(w):
-    return torch.cat([v.flatten() for v in w.values()])
+    return torch.cat([v.flatten() for v in w.values() if v is not None])
 
 def calc_gradsNorm(gconvNames, Ws):
     grads_conv = {k: Ws[k].grad for k in gconvNames}
@@ -124,7 +129,8 @@ def calc_gradsNorm(gconvNames, Ws):
 def train_gc(model, dataloaders, optimizer, local_epoch, device):
     losses_train, accs_train, losses_val, accs_val, losses_test, accs_test = [], [], [], [], [], []
     train_loader, val_loader, test_loader = dataloaders['train'], dataloaders['val'], dataloaders['test']
-
+    # for batch in train_loader:
+    #     print(batch.dists[0].shape)
     for epoch in range(local_epoch):
         model.train()
         total_loss = 0.
@@ -133,11 +139,25 @@ def train_gc(model, dataloaders, optimizer, local_epoch, device):
 
         for _, batch in enumerate(train_loader):
             batch.to(device)
+            # print([t for t in batch])
+
             optimizer.zero_grad()
             pred = model(batch) #运行模型的前向传播，得到预测结果
+            # print(pred, "预测结果,就是模型里面的输出")
+            '''
+            在第一行的两个值 [-1.7594e+00, -1.8891e-01] 中，第一个值是该样本属于第一个类别的对数概率，第二个值是属于第二个类别的对数概率
+            这些值通常是负的，因为它们是概率的对数（概率值在0和1之间）。
+            
+            在多类别分类中，你通常会选择对数概率最高的类别作为该样本的预测类别。
+            例如，如果一个样本的对数概率是 [-2.0, -0.5, -3.0]，你会预测它属于第二个类别，因为 -0.5 是这三个数中最大的。
+            '''
+            # print(pred.shape)
+            # print(batch.y)
+            # print(batch)
             label = batch.y
             acc_sum += pred.max(dim=1)[1].eq(label).sum().item()
             # print(pred.max(dim=1))
+            # print(pred)
             # print(label)
             # print("batch.num_graphs",batch.num_graphs)
             '''
@@ -152,9 +172,9 @@ def train_gc(model, dataloaders, optimizer, local_epoch, device):
             optimizer.step() # 使用优化器执行一步参数更新（optimizer.step()）。
             total_loss += loss.item() * batch.num_graphs
             ngraphs += batch.num_graphs
+
         total_loss /= ngraphs
         acc = acc_sum / ngraphs
-
         loss_v, acc_v = eval_gc(model, val_loader, device)
         loss_tt, acc_tt = eval_gc(model, test_loader, device)
 
